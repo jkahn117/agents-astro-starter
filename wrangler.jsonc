@@ -1,13 +1,31 @@
 {
-	"compatibility_date": "2025-09-27",
-	"compatibility_flags": ["global_fetch_strictly_public"],
-	"name": "",
-	"main": "@astrojs/cloudflare/entrypoints/server",
-	"assets": {
-		"directory": "./dist",
-		"binding": "ASSETS"
-	},
-	"observability": {
-		"enabled": true
-	}
+  "compatibility_date": "2026-03-16",
+  "compatibility_flags": ["global_fetch_strictly_public", "nodejs_compat"],
+  "name": "agents-base",
+  "main": "./src/worker.ts",
+
+  "assets": {
+    "directory": "./dist",
+    "binding": "ASSETS",
+  },
+
+  "observability": {
+    "enabled": true,
+  },
+
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "CounterAgent",
+        "class_name": "CounterAgent",
+      },
+    ],
+  },
+
+  "migrations": [
+    {
+      "tag": "v1",
+      "new_sqlite_classes": ["CounterAgent"],
+    },
+  ],
 }
