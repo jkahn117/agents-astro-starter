@@ -6,26 +6,26 @@
 
   "assets": {
     "directory": "./dist",
-    "binding": "ASSETS",
+    "binding": "ASSETS"
   },
 
   "observability": {
-    "enabled": true,
+    "enabled": true
   },
 
   "durable_objects": {
     "bindings": [
       {
         "name": "CounterAgent",
-        "class_name": "CounterAgent",
-      },
-    ],
+        "class_name": "CounterAgent"
+      }
+    ]
   },
 
   "migrations": [
     {
       "tag": "v1",
-      "new_sqlite_classes": ["CounterAgent"],
-    },
-  ],
+      "new_sqlite_classes": ["CounterAgent"]
+    }
+  ]
 }
