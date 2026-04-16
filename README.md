@@ -1,46 +1,174 @@
-# Astro Starter Kit: Basics
+# Astro + Cloudflare Agents Starter
+
+Starter template for building stateful Cloudflare Agents with an Astro frontend, a Hono worker entrypoint, and shadcn/Tailwind UI primitives.
+
+The sample app is a small counter that connects a React island to a `CounterAgent` Durable Object over WebSockets.
+
+## Stack
+
+- Astro 6 with the Cloudflare adapter
+- Cloudflare Workers + Durable Objects
+- Cloudflare Agents SDK
+- Hono + `hono-agents` middleware
+- React 19 islands inside Astro
+- Tailwind CSS v4 + shadcn/ui
+
+## What This Starter Includes
+
+- An Astro page at `src/pages/index.astro`
+- A React counter widget at `src/components/CounterWidget.tsx`
+- A sample agent class at `src/agents/counter.ts`
+- A Hono worker entrypoint at `src/worker.ts`
+- Wrangler config for a Durable Object binding in `wrangler.jsonc`
+- shadcn configuration in `components.json`
+
+## Quick Start
+
+### Prerequisites
+
+- Node.js `>=22.12.0`
+- `pnpm`
+- A Cloudflare account if you want to deploy
+
+### Install
 
 ```sh
-pnpm create astro@latest -- --template basics
+pnpm install
 ```
 
-> 🧑‍🚀 **Seasoned astronaut?** Delete this file. Have fun!
+### Run locally
 
-## 🚀 Project Structure
+```sh
+pnpm dev
+```
 
-Inside of your Astro project, you'll see the following folders and files:
+Astro starts the app on `http://localhost:4321`.
+
+### Build
+
+```sh
+pnpm build
+```
+
+### Preview the production build
+
+```sh
+pnpm preview
+```
+
+## Commands
+
+| Command | Purpose |
+| --- | --- |
+| `pnpm install` | Install dependencies |
+| `pnpm dev` | Start the local Astro dev server |
+| `pnpm build` | Build static assets into `dist/` |
+| `pnpm preview` | Preview the built app locally |
+| `pnpm generate-types` | Regenerate `worker-configuration.d.ts` from Wrangler |
+| `pnpm astro -- --help` | Show Astro CLI help |
+
+## How It Works
+
+### Request flow
+
+1. `src/worker.ts` creates a Hono app.
+2. `agentsMiddleware()` intercepts agent HTTP and WebSocket traffic.
+3. A sample API route is exposed at `/api/hello`.
+4. Everything else falls through to Astro via `@astrojs/cloudflare/handler`.
+
+### Agent flow
+
+1. `CounterAgent` in `src/agents/counter.ts` stores `{ count: number }` as Durable Object state.
+2. The `increment()` and `decrement()` methods are exposed with `@callable()`.
+3. `CounterWidget` uses `useAgent()` from `agents/react`.
+4. State updates from the agent are pushed back to the client and rendered in the UI.
+
+## Project Structure
 
 ```text
-/
-├── public/
-│   └── favicon.svg
-├── src
-│   ├── assets
-│   │   └── astro.svg
-│   ├── components
-│   │   └── Welcome.astro
-│   ├── layouts
-│   │   └── Layout.astro
-│   └── pages
-│       └── index.astro
-└── package.json
+.
+|-- components.json
+|-- src/
+|   |-- agents/
+|   |   `-- counter.ts
+|   |-- components/
+|   |   |-- CounterWidget.tsx
+|   |   `-- ui/
+|   |-- layouts/
+|   |   `-- Layout.astro
+|   |-- lib/
+|   |   `-- utils.ts
+|   |-- pages/
+|   |   `-- index.astro
+|   |-- styles/
+|   |   `-- global.css
+|   `-- worker.ts
+|-- worker-configuration.d.ts
+`-- wrangler.jsonc
 ```
 
-To learn more about the folder structure of an Astro project, refer to [our guide on project structure](https://docs.astro.build/en/basics/project-structure/).
+## Key Files
 
-## 🧞 Commands
+- `src/worker.ts`: Cloudflare Worker entrypoint, Hono routes, Astro handler bridge
+- `src/agents/counter.ts`: sample stateful agent class
+- `src/components/CounterWidget.tsx`: React client that talks to the agent
+- `src/styles/global.css`: Tailwind v4 imports, shadcn theme tokens, Geist font
+- `wrangler.jsonc`: Worker name, assets binding, Durable Object binding, migrations
+- `worker-configuration.d.ts`: generated Cloudflare binding types
 
-All commands are run from the root of the project, from a terminal:
+## Extending The Starter
 
-| Command                   | Action                                           |
-| :------------------------ | :----------------------------------------------- |
-| `pnpm install`             | Installs dependencies                            |
-| `pnpm dev`             | Starts local dev server at `localhost:4321`      |
-| `pnpm build`           | Build your production site to `./dist/`          |
-| `pnpm preview`         | Preview your build locally, before deploying     |
-| `pnpm astro ...`       | Run CLI commands like `astro add`, `astro check` |
-| `pnpm astro -- --help` | Get help using the Astro CLI                     |
+### Add a new agent
 
-## 👀 Want to learn more?
+1. Create a new class in `src/agents/` that extends `Agent<Env, State>`.
+2. Export that class from `src/worker.ts`.
+3. Add a matching Durable Object binding and migration entry in `wrangler.jsonc`.
+4. Run `pnpm generate-types`.
+5. Connect to it from the client with `useAgent()`.
 
-Feel free to check [our documentation](https://docs.astro.build) or jump into our [Discord server](https://astro.build/chat).
+### Add UI components
+
+This project already includes shadcn setup through `components.json` and `src/styles/global.css`.
+
+Example:
+
+```sh
+pnpm dlx shadcn@latest add dialog
+```
+
+### Add API routes
+
+Add routes directly in `src/worker.ts` before the final `app.all("*", ...)` handler.
+
+## Deployment Notes
+
+This repo does not include a deploy script yet.
+
+Typical flow:
+
+```sh
+pnpm build
+pnpm exec wrangler deploy
+```
+
+Because Wrangler serves `dist/` as the asset directory, build before deploying.
+
+## Generated And Derived Files
+
+- `worker-configuration.d.ts` is generated by Wrangler. Regenerate it after binding changes.
+- `dist/` is build output.
+- `.astro/` is generated by Astro.
+
+Do not hand-edit generated files unless you have a specific reason.
+
+## Repository Notes
+
+- TypeScript is in strict mode via `astro/tsconfigs/strict`.
+- The current starter has no automated test suite configured.
+- The repository includes local AI skills under `.agents/skills/` for Cloudflare and Agents SDK work.
+
+## Next Useful Improvements
+
+1. Add a deploy script and document environments.
+2. Add tests for the worker and the sample agent.
+3. Replace the counter with a more realistic agent example such as chat, tasks, or shared presence.
