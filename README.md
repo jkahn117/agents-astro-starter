@@ -1,6 +1,6 @@
 # Astro + Cloudflare Agents Starter
 
-Starter template for building stateful Cloudflare Agents with an Astro frontend, a Hono worker entrypoint, and shadcn/Tailwind UI primitives.
+Starter template for building stateful Cloudflare Agents with an Astro frontend, a Hono worker entrypoint, Workers Powertools observability helpers, and shadcn/Tailwind UI primitives.
 
 The sample app is a small counter that connects a React island to a `CounterAgent` Durable Object over WebSockets.
 
@@ -9,6 +9,7 @@ The sample app is a small counter that connects a React island to a `CounterAgen
 - Astro 6 with the Cloudflare adapter
 - Cloudflare Workers + Durable Objects
 - Cloudflare Agents SDK
+- Workers Powertools logger + tracer + metrics + agents helpers
 - Hono + `hono-agents` middleware
 - React 19 islands inside Astro
 - Tailwind CSS v4 + shadcn/ui
@@ -19,6 +20,8 @@ The sample app is a small counter that connects a React island to a `CounterAgen
 - A React counter widget at `src/components/CounterWidget.tsx`
 - A sample agent class at `src/agents/counter.ts`
 - A Hono worker entrypoint at `src/worker.ts`
+- Astro request middleware in `src/middleware.ts`
+- Shared Powertools modules in `src/lib/logger.ts`, `src/lib/tracer.ts`, and `src/lib/metrics.ts`
 - Wrangler config for a Durable Object binding in `wrangler.jsonc`
 - shadcn configuration in `components.json`
 
@@ -73,8 +76,9 @@ pnpm preview
 
 1. `src/worker.ts` creates a Hono app.
 2. `agentsMiddleware()` intercepts agent HTTP and WebSocket traffic.
-3. A sample API route is exposed at `/api/hello`.
-4. Everything else falls through to Astro via `@astrojs/cloudflare/handler`.
+3. Powertools Hono middleware always instruments `/api/*` logs and traces, and enables request metrics only when a metrics backend is configured.
+4. A sample API route is exposed at `/api/hello`.
+5. Everything else falls through to Astro via `@astrojs/cloudflare/handler`, where Astro middleware adds request observability and only enables metrics when a backend is configured.
 
 ### Agent flow
 
@@ -82,6 +86,7 @@ pnpm preview
 2. The `increment()` and `decrement()` methods are exposed with `@callable()`.
 3. `CounterWidget` uses `useAgent()` from `agents/react`.
 4. State updates from the agent are pushed back to the client and rendered in the UI.
+5. Workers Powertools adds request and agent context to logs, traces, and optional business metrics.
 
 ## Project Structure
 
@@ -97,7 +102,11 @@ pnpm preview
 |   |-- layouts/
 |   |   `-- Layout.astro
 |   |-- lib/
+|   |   |-- logger.ts
+|   |   |-- metrics.ts
+|   |   |-- tracer.ts
 |   |   `-- utils.ts
+|   |-- middleware.ts
 |   |-- pages/
 |   |   `-- index.astro
 |   |-- styles/
@@ -109,9 +118,13 @@ pnpm preview
 
 ## Key Files
 
-- `src/worker.ts`: Cloudflare Worker entrypoint, Hono routes, Astro handler bridge
-- `src/agents/counter.ts`: sample stateful agent class
+- `src/worker.ts`: Cloudflare Worker entrypoint, Hono routes, Powertools API middleware, Astro handler bridge
+- `src/middleware.ts`: Astro middleware for logger, tracer, and metrics injection
+- `src/agents/counter.ts`: sample stateful agent class with Powertools agent context, traces, and metrics
 - `src/components/CounterWidget.tsx`: React client that talks to the agent
+- `src/lib/logger.ts`: shared application logger
+- `src/lib/tracer.ts`: shared application tracer
+- `src/lib/metrics.ts`: shared metrics instance and optional Pipelines binding helper
 - `src/styles/global.css`: Tailwind v4 imports, shadcn theme tokens, Geist font
 - `wrangler.jsonc`: Worker name, assets binding, Durable Object binding, migrations
 - `worker-configuration.d.ts`: generated Cloudflare binding types
@@ -140,6 +153,16 @@ pnpm dlx shadcn@latest add dialog
 
 Add routes directly in `src/worker.ts` before the final `app.all("*", ...)` handler.
 
+### Enable metrics delivery
+
+`@workers-powertools/metrics` is wired into the starter, but the Astro and Hono metrics middleware only activate when a `METRICS_PIPELINE` binding is configured.
+
+1. Create a Cloudflare Pipelines stream for your metrics.
+2. Add a `METRICS_PIPELINE` binding in `wrangler.jsonc`.
+3. Run `pnpm generate-types`.
+
+Until that binding exists, logs and traces still work and metrics stay inactive without emitting no-backend warnings during build or local development.
+
 ## Deployment Notes
 
 This repo does not include a deploy script yet.
@@ -165,6 +188,7 @@ Do not hand-edit generated files unless you have a specific reason.
 
 - TypeScript is in strict mode via `astro/tsconfigs/strict`.
 - The current starter has no automated test suite configured.
+- The starter includes Workers Powertools packages for logging, tracing, metrics, and agent instrumentation.
 - The repository includes local AI skills under `.agents/skills/` for Cloudflare and Agents SDK work.
 
 ## Next Useful Improvements
